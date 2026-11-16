@@ -189,7 +189,6 @@ function renderList(list) {
     ${sectionList(list, due, '還沒有今天的項目，按右下角＋新增')}
     ${rest.length ? `<div class="sec"><span class="ttl">其他日子</span><span>今天不用提醒</span></div>${rest.map(it => itemRow(it, { showOff: true })).join('')}` : ''}
     ${onceDone.length ? `<div class="sec"><span class="ttl">已完成、不再提醒</span></div>${onceDone.map(it => itemRow(it, { showOff: false })).join('')}` : ''}
-    <button class="link" data-act="reset">恢復範例資料</button>
   </div>
   ${fab(list)}
   ${navHtml(list)}`;
