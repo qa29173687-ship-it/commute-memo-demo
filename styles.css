@@ -204,3 +204,21 @@ textarea{min-height:72px;resize:vertical}
 .body.home .freq .pill{font-size:13px;padding:5px 10px}
 .body.home .note{font-size:13px;padding:10px 12px}
 .body.home .sim-row .btn{padding:10px 6px;font-size:12px}
+
+.btn.mini{display:inline-block;width:auto;padding:7px 12px;font-size:13px;border-radius:12px;margin-top:8px}
+.btn.ghost.danger{background:#fff;color:var(--rose);border-color:#E7B4AE}
+.row-acts{margin-top:4px}
+.sale-row.overdue{border:2px solid #F5C6C2}
+.nightq{position:fixed;inset:0;z-index:45;background:var(--cream);overflow:auto}
+.nightq.hidden{display:none !important}
+.nightq-inner{max-width:560px;margin:0 auto;padding:22px 16px calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;min-height:100%}
+.nq-kicker{font-size:13px;font-weight:800;color:var(--inkSoft);letter-spacing:.04em}
+.nightq h2{margin:0;font-size:26px;font-weight:900}
+.nq-sec{font-weight:900;font-size:16px;margin-top:6px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.nq-sec .count{font-size:13px;font-weight:800;color:var(--inkSoft)}
+.nq-item{background:#fff;border-radius:18px;padding:14px}
+.nq-actions{display:flex;gap:6px;margin-top:10px}
+.nq-actions .btn{font-size:13px;padding:10px 6px}
+.nq-tmr{background:#fff;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:8px;font-weight:800}
+.nq-tmr .nq-when{margin-left:auto;font-size:12px;font-weight:700;color:var(--inkSoft)}
+.nq-tmr .tag{margin-left:0}

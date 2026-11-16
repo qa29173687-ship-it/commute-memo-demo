@@ -1,17 +1,15 @@
 /** 出門備忘 DEMO — 範例資料與純函式。所有項目皆為範例。 */
 
-export const VERSION = 4;
+export const VERSION = 5;
 export const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
 export const LISTS = {
   evening: { id: 'evening', name: '下班順便做', short: '順便', emoji: '🛒', verb: '順便做' },
-  morning: { id: 'morning', name: '上班帶出門', short: '出門', emoji: '👜', verb: '帶出門' },
-  buy: { id: 'buy', name: '淘寶採購清單', short: '淘寶', emoji: '📦', verb: '採購' }
+  buy: { id: 'buy', name: '採購清單', short: '採購', emoji: '📦', verb: '採購' }
 };
 
 export const EMOJIS = {
   evening: ['📦', '🥛', '👔', '🗑️', '⛽', '🥬', '🍞', '🧺', '📮', '🍱', '📝'],
-  morning: ['🔑', '🪪', '☂️', '🍱', '🔌', '📓', '🧴', '💊', '🎧', '🥤', '📝'],
   buy: ['🎧', '🔌', '📦', '🩴', '📱', '🧥', '📚', '🧴', '🧸', '💡', '📝']
 };
 
@@ -29,13 +27,6 @@ export const FREQUENT = {
     { title: '拿乾洗衣服', emoji: '👔', type: 'take', repeat: 'once' },
     { title: '買晚餐', emoji: '🍱', type: 'buy', repeat: 'once' }
   ],
-  morning: [
-    { title: '鑰匙', emoji: '🔑', repeat: 'daily' },
-    { title: '識別證', emoji: '🪪', repeat: 'weekly', weekdays: [1, 2, 3, 4, 5] },
-    { title: '雨傘', emoji: '☂️', repeat: 'daily' },
-    { title: '充電線', emoji: '🔌', repeat: 'daily' },
-    { title: '便當', emoji: '🍱', repeat: 'weekly', weekdays: [1, 2, 3, 4, 5] }
-  ]
 };
 
 export const SEED_ITEMS = [
@@ -45,17 +36,12 @@ export const SEED_ITEMS = [
   { id: 'e6', list: 'evening', title: '明天下班買牛奶', emoji: '🥛', type: 'buy', repeat: 'once', weekdays: [], dueOffset: 1, note: '今晚先加進清單，明天下班再買', doneOn: null, completedOnce: false },
   { id: 'e4', list: 'evening', title: '倒垃圾', emoji: '🗑️', type: 'take', repeat: 'weekly', weekdays: [3], note: '週三晚上拿到樓下', doneOn: null, completedOnce: false },
   { id: 'e5', list: 'evening', title: '加油', emoji: '⛽', type: 'buy', repeat: 'weekly', weekdays: [5], note: '週五下班順路', doneOn: null, completedOnce: false },
-  { id: 'm1', list: 'morning', title: '鑰匙', emoji: '🔑', repeat: 'daily', weekdays: [], note: '', doneOn: null, completedOnce: false },
-  { id: 'm2', list: 'morning', title: '識別證', emoji: '🪪', repeat: 'weekly', weekdays: [1, 2, 3, 4, 5], note: '記得刷卡', doneOn: null, completedOnce: false },
-  { id: 'm3', list: 'morning', title: '雨傘', emoji: '☂️', repeat: 'daily', weekdays: [], note: '最近常下雨', doneOn: null, completedOnce: false },
-  { id: 'm4', list: 'morning', title: '便當', emoji: '🍱', repeat: 'weekly', weekdays: [1, 2, 3, 4, 5], note: '', doneOn: null, completedOnce: false },
-  { id: 'm5', list: 'morning', title: '充電線', emoji: '🔌', repeat: 'daily', weekdays: [], note: '', doneOn: null, completedOnce: false },
-  { id: 'm6', list: 'morning', title: '筆記本', emoji: '📓', repeat: 'weekly', weekdays: [2], note: '週二開會用', doneOn: null, completedOnce: false },
   { id: 'b1', list: 'buy', title: '冬季拖鞋', emoji: '🩴', note: '看評價再下單', saleName: '週年慶', saleDate: '2026-11-20', remindDays: 7, remindMode: 'notify', boughtOn: null },
   { id: 'b2', list: 'buy', title: 'Type-C 充電線 三條', emoji: '🔌', note: '選好評賣家', saleName: '雙12', saleDate: '2026-12-12', remindDays: 3, remindMode: 'notify', boughtOn: null },
   { id: 'b3', list: 'buy', title: '廚房密封盒', emoji: '🥡', note: '一套六件', saleName: '歲末特賣', saleDate: '2026-12-01', remindDays: 0, remindMode: 'alarm', boughtOn: null },
-  { id: 'b4', list: 'buy', title: '桌面收納盒', emoji: '📦', note: '', saleName: '', saleDate: '', remindDays: 3, remindMode: 'notify', boughtOn: null },
-  { id: 'b5', list: 'buy', title: '手機殼', emoji: '📱', note: '已下單，等到貨', saleName: '雙11', saleDate: '2026-11-11', remindDays: 1, remindMode: 'notify', boughtOn: '2026-11-12' }
+  { id: 'b4', list: 'buy', title: '桌面收納盒', emoji: '📦', note: '不一定要等檔期', saleName: '', saleDate: '2026-11-25', remindDays: 3, remindMode: 'notify', boughtOn: null },
+  { id: 'b5', list: 'buy', title: '手機殼', emoji: '📱', note: '已下單，等到貨', saleName: '雙11', saleDate: '2026-11-11', remindDays: 1, remindMode: 'notify', boughtOn: '2026-11-12' },
+  { id: 'b6', list: 'buy', title: '藍牙耳機', emoji: '🎧', note: '上次沒買到，可改一個新日期再提醒', saleName: '雙11', dateOffset: -2, remindDays: 1, remindMode: 'notify', boughtOn: null }
 ];
 
 export function seedState() {
@@ -65,7 +51,9 @@ export function seedState() {
       const copy = { ...it, weekdays: [...(it.weekdays || [])] };
       if (it.dueOffset === 0) copy.dueDate = todayISO();
       else if (it.dueOffset === 1) copy.dueDate = addDays(todayISO(), 1);
+      if (typeof it.dateOffset === 'number') copy.saleDate = addDays(todayISO(), it.dateOffset);
       delete copy.dueOffset;
+      delete copy.dateOffset;
       return copy;
     }),
     settings: {
@@ -245,9 +233,20 @@ export function upcomingSales(items, dateStr) {
     .sort((a, b) => a.saleDate.localeCompare(b.saleDate) || a.title.localeCompare(b.title, 'zh-Hant'));
 }
 
+export function isBuyOverdue(item, dateStr) {
+  return !!(item.list === 'buy' && !item.boughtOn && item.saleDate && item.saleDate < dateStr);
+}
+
+export function overdueBuys(items, dateStr) {
+  return items
+    .filter(it => isBuyOverdue(it, dateStr))
+    .sort((a, b) => a.saleDate.localeCompare(b.saleDate) || a.title.localeCompare(b.title, 'zh-Hant'));
+}
+
 export function saleCountdown(iso, dateStr) {
   const n = daysUntil(iso, dateStr);
-  if (n === 0) return '今天開始打折';
+  if (n === 0) return '就是今天';
   if (n === 1) return '還有 1 天';
+  if (n < 0) return n === -1 ? '已過期 1 天' : `已過期 ${-n} 天`;
   return `還有 ${n} 天`;
 }
