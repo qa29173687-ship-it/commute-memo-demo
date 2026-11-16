@@ -175,3 +175,15 @@ textarea{min-height:72px;resize:vertical}
 @media (min-width:600px){
   #app{border-left:1px solid var(--line);border-right:1px solid var(--line);min-height:100vh}
 }
+
+.pill.used{opacity:.45}
+.badge.take{background:var(--skySoft);color:var(--skyDeep)}
+.badge.buytag{background:var(--amberSoft);color:var(--amberDeep)}
+.wtag{flex:none;font-size:10px;font-weight:800;border-radius:999px;padding:1px 6px;line-height:1.4}
+.wtag.take{background:var(--skySoft);color:var(--skyDeep)}
+.wtag.buytag{background:var(--amberSoft);color:var(--amberDeep)}
+.widget .sec-l.eve{color:var(--amberDeep);font-size:12px}
+.widget .remain.eve{color:var(--amberDeep)}
+.card.feat{border:2px solid var(--amber);box-shadow:0 6px 16px rgba(208,122,26,.08)}
+.freq{display:flex;flex-direction:column;gap:8px}
+.iname .tag{margin-left:6px;vertical-align:middle}

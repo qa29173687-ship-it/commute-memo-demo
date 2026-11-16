@@ -1,7 +1,7 @@
 import * as D from './data.js';
 
-const KEY = 'commute-memo-demo-v2';
-const WELCOME_KEY = 'commute-memo-demo-welcome-v2';
+const KEY = 'commute-memo-demo-v3';
+const WELCOME_KEY = 'commute-memo-demo-welcome-v3';
 
 const $ = (s, r = document) => r.querySelector(s);
 let state, toastTimer, highlightList = null;
@@ -12,10 +12,11 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      if (s && s.version === D.VERSION && Array.isArray(s.items) && s.settings?.morning && s.settings?.evening) {
+      if (s && s.version === D.VERSION && Array.isArray(s.items) && s.settings?.evening && s.settings?.night) {
         state = s;
-        state.settings.morning = { ...D.SEED_SETTINGS.morning, ...s.settings.morning, weekdays: [...(s.settings.morning.weekdays || D.SEED_SETTINGS.morning.weekdays)] };
-        state.settings.evening = { ...D.SEED_SETTINGS.evening, ...s.settings.evening, weekdays: [...(s.settings.evening.weekdays || D.SEED_SETTINGS.evening.weekdays)] };
+        for (const k of ['evening', 'night']) {
+          state.settings[k] = { ...D.SEED_SETTINGS[k], ...s.settings[k], weekdays: [...(s.settings[k].weekdays || D.SEED_SETTINGS[k].weekdays)] };
+        }
         return;
       }
     }
@@ -99,12 +100,19 @@ function uid() {
   return 'i-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+function typeBadge(it, cls = 'badge') {
+  const lab = D.typeLabel(it.type);
+  if (!lab) return '';
+  const kind = it.type === 'buy' ? 'buytag' : 'take';
+  return `<span class="${cls} ${kind}">${lab}</span>`;
+}
+
 function navHtml(active) {
   const items = [
     ['home', '桌面', '📱', '#/'],
-    ['morning', '出門', '👜', '#/morning'],
     ['evening', '順便', '🛒', '#/evening'],
-    ['buy', '想買', '🛍️', '#/buy'],
+    ['morning', '出門', '👜', '#/morning'],
+    ['buy', '淘寶', '📦', '#/buy'],
     ['remind', '提醒', '⏰', '#/remind']
   ];
   return `<nav class="nav">${items.map(([k, lab, ico, href]) =>
@@ -122,7 +130,7 @@ function topBar(title, sub, back) {
 
 function fab(list) {
   const plum = list === 'buy' ? ' plum' : '';
-  return `<button class="fab${plum}" data-act="add" data-list="${esc(list || '')}" aria-label="新增項目">＋</button>`;
+  return `<button class="fab${plum}" data-act="add" data-list="${esc(list || 'evening')}" aria-label="新增項目">＋</button>`;
 }
 
 function itemRow(it, opts = {}) {
@@ -130,14 +138,14 @@ function itemRow(it, opts = {}) {
   const day = todayDow();
   const done = D.isDoneOn(it, d);
   const showOff = opts.showOff && !D.isDueOn(it, d, day) && !(it.repeat === 'once' && it.completedOnce);
-  const hideOnceDone = it.repeat === 'once' && it.completedOnce && opts.hideOnce;
-  if (hideOnceDone) return '';
+  if (it.repeat === 'once' && it.completedOnce && opts.hideOnce) return '';
   const meta = [D.repeatLabel(it), it.note, showOff ? '今天不用提醒' : ''].filter(Boolean).join(' · ');
+  const badge = it.list === 'evening' ? typeBadge(it) : '';
   return `<div class="card item-card ${showOff ? 'off' : ''}">
     <div class="check">
       <button class="chk ${done ? 'on' : ''}" data-act="toggle" data-id="${esc(it.id)}" aria-label="${done ? '取消打勾' : '打勾'}" aria-pressed="${done}">${done ? '✓' : ''}</button>
       <div class="grow body-t" data-act="edit" data-id="${esc(it.id)}">
-        <div class="iname ${done ? 'done' : ''}">${esc(it.emoji || '')} ${esc(it.title)}</div>
+        <div class="iname ${done ? 'done' : ''}">${esc(it.emoji || '')} ${esc(it.title)}${badge ? ` <span class="tag">${badge}</span>` : ''}</div>
         <div class="item-meta">${esc(meta)}</div>
       </div>
       <button class="more" data-act="edit" data-id="${esc(it.id)}" aria-label="編輯">⋯</button>
@@ -156,10 +164,10 @@ function buyRow(it) {
     if (!bought) tags.push(`<span class="badge mute">${esc(D.remindDaysLabel(it.remindDays))} · ${esc(D.modeLabel(it.remindMode))}</span>`);
     if (!bought && due) tags.push(`<span class="badge due">今天該提醒</span>`);
   }
-  if (bought) tags.push(`<span class="badge ok">已買 · ${esc(D.isoLabel(it.boughtOn))}</span>`);
+  if (bought) tags.push(`<span class="badge ok">已買${it.boughtOn ? ' · ' + esc(D.isoLabel(it.boughtOn)) : ''}</span>`);
   return `<div class="card item-card sale-row ${bought ? 'off' : ''}">
     <div class="check">
-      <button class="chk ${bought ? 'on' : ''}" data-act="toggle" data-id="${esc(it.id)}" aria-label="${bought ? '改回想買' : '標記已買'}" aria-pressed="${bought}">${bought ? '✓' : ''}</button>
+      <button class="chk ${bought ? 'on' : ''}" data-act="toggle" data-id="${esc(it.id)}" aria-label="${bought ? '改回未買' : '標記已買'}" aria-pressed="${bought}">${bought ? '✓' : ''}</button>
       <div class="grow body-t" data-act="edit" data-id="${esc(it.id)}">
         <div class="iname ${bought ? 'done' : ''}">${esc(it.emoji || '')} ${esc(it.title)}</div>
         ${it.note ? `<div class="item-meta">${esc(it.note)}</div>` : ''}
@@ -170,48 +178,77 @@ function buyRow(it) {
   </div>`;
 }
 
+function frequentBlock(list, compact) {
+  const d = today(), day = todayDow();
+  const chips = (D.FREQUENT[list] || []).map((f, i) => {
+    const exists = itemsOf(list).some(it => it.title === f.title && D.stillVisibleToday(it, d, day));
+    const on = exists ? 'used' : (list === 'evening' ? 'on amber' : 'on');
+    return `<button type="button" class="pill ${on}" data-act="add-freq" data-list="${list}" data-i="${i}">${esc(f.emoji || '')} ${esc(f.title)}</button>`;
+  }).join('');
+  const label = compact
+    ? (list === 'evening' ? '下班常用' : '出門常用')
+    : '常用項目，點一下加入今天';
+  return `<div class="freq">
+    <div class="lbl">${label}</div>
+    <div class="pills wrap">${chips}</div>
+  </div>`;
+}
+
 function widgetBlock() {
   const d = today();
-  const morn = todayItems('morning');
   const eve = todayItems('evening');
-  const left = remaining('morning').length + remaining('evening').length;
+  const morn = todayItems('morning');
+  const leftE = remaining('evening').length;
+  const leftM = remaining('morning').length;
   const rows = (arr) => arr.length
     ? arr.map(it => {
         const done = D.isDoneOn(it, d);
+        const tag = it.list === 'evening' && D.typeLabel(it.type)
+          ? `<span class="wtag ${it.type === 'buy' ? 'buytag' : 'take'}">${D.typeLabel(it.type)}</span>`
+          : '';
         return `<button type="button" class="wrow ${done ? 'done' : ''}" data-act="toggle" data-id="${esc(it.id)}">
           <span class="wchk">${done ? '✓' : ''}</span>
           <span class="wname">${esc(it.emoji || '')} ${esc(it.title)}</span>
+          ${tag}
         </button>`;
       }).join('')
     : `<div class="hint">今天沒有項目</div>`;
+  const remain = (leftE || leftM)
+    ? `順便還有 ${leftE} 件 · 出門 ${leftM} 件`
+    : '今天都打完了';
   return `<div class="widget">
     <div class="wh"><div class="wt">出門備忘</div><div class="wd">${esc(D.shortDate(now()))}</div></div>
-    <div class="remain">${left ? `今天還有 ${left} 件沒打勾` : '今天都打完了'}</div>
+    <div class="remain eve">${remain}</div>
+    <div class="sec-l eve">🛒 下班順便做</div>
+    ${rows(eve)}
     <div class="sec-l">👜 上班帶出門</div>
     ${rows(morn)}
-    <div class="sec-l">🛒 下班順便做</div>
-    ${rows(eve)}
-    <div class="add"><button class="wadd" data-act="add" data-list="" type="button">＋ 新增</button></div>
+    <div class="add"><button class="wadd" data-act="add" data-list="evening" type="button">＋ 新增順便</button></div>
   </div>`;
 }
 
 function renderHome() {
-  return `${topBar('出門備忘', `${D.dateLabel(now())} · 桌面小工具`)}
+  return `${topBar('出門備忘', `${D.dateLabel(now())} · 先看下班順便做`)}
   <div class="body home">
     <div class="homescreen">
       <div class="hs-bar"><span>9:41</span><span>▮▮▮ 🔋</span></div>
       ${widgetBlock()}
       <div class="icons">
         <button type="button" class="ico-app" data-act="noop"><span class="sq">📱</span>出門備忘</button>
-        <button type="button" class="ico-app" data-act="go" data-hash="#/buy"><span class="sq">🛍️</span>想買</button>
+        <button type="button" class="ico-app" data-act="go" data-hash="#/evening"><span class="sq">🛒</span>順便</button>
+        <button type="button" class="ico-app" data-act="go" data-hash="#/buy"><span class="sq">📦</span>淘寶</button>
         <button type="button" class="ico-app" data-act="go" data-hash="#/remind"><span class="sq">⏰</span>提醒</button>
-        <button type="button" class="ico-app" data-act="noop"><span class="sq">📷</span>相機</button>
       </div>
     </div>
-    <div class="note">正式 App 可把小工具放在桌面，直接打勾或新增。想買的東西只在 App 裡，不會出現在小工具上。</div>
+    <div class="card">
+      ${frequentBlock('evening', true)}
+      <div style="height:8px"></div>
+      ${frequentBlock('morning', true)}
+    </div>
+    <div class="note amber">主角是下班順便做，可在小工具上打勾或一鍵加入常用項目。淘寶採購清單只在 App 裡，不會出現在小工具；打折日期要自己輸入。</div>
     <button class="link" data-act="reset">恢復範例資料</button>
   </div>
-  ${fab('')}
+  ${fab('evening')}
   ${navHtml('home')}`;
 }
 
@@ -223,11 +260,15 @@ function renderList(list) {
   const onceDone = all.filter(it => it.repeat === 'once' && it.completedOnce);
   const rest = all.filter(it => !D.stillVisibleToday(it, d, day) && !(it.repeat === 'once' && it.completedOnce));
   const sub = `今天 ${due.length} 件要${meta.verb} · 共 ${all.length - onceDone.length} 項`;
+  const note = list === 'evening'
+    ? '這是這個 App 的主力：下班回家順路要「拿」或「買」的事。常用項目點一下就能加入今天。'
+    : '上班帶出門只在前一晚提醒，沒有早上鬧鐘。例如週二才帶的筆記本，其他日子不會出現在今天清單，也不會出現在小工具。';
   return `${topBar(meta.name, sub, true)}
   <div class="body">
-    <div class="note ${list === 'evening' ? 'amber' : ''}">今天只會提醒到期的項目。例如「週三倒垃圾」在別的日子不會出現在今天清單，也不會出現在桌面小工具。</div>
-    ${due.length ? `<div class="sec"><span class="ttl">今天要${meta.verb}</span></div>` : ''}
-    ${due.length ? due.map(it => itemRow(it)).join('') : `<div class="card empty"><div class="e">${meta.emoji}</div>還沒有今天的項目，按右下角＋新增</div>`}
+    <div class="note ${list === 'evening' ? 'amber' : ''}">${note}</div>
+    <div class="card">${frequentBlock(list)}</div>
+    ${due.length ? `<div class="sec${highlightList === list ? ' hi' : ''}"><span class="ttl">今天要${meta.verb}</span></div>` : ''}
+    ${due.length ? due.map(it => itemRow(it)).join('') : `<div class="card empty"><div class="e">${meta.emoji}</div>還沒有今天的項目，按常用項目或右下角＋新增</div>`}
     ${rest.length ? `<div class="sec"><span class="ttl">其他日子</span><span>今天不用提醒</span></div>${rest.map(it => itemRow(it, { showOff: true })).join('')}` : ''}
     ${onceDone.length ? `<div class="sec"><span class="ttl">已完成、不再提醒</span></div>${onceDone.map(it => itemRow(it)).join('')}` : ''}
   </div>
@@ -243,14 +284,15 @@ function renderBuy() {
   const noSale = want.filter(it => !it.saleDate);
   const past = want.filter(it => it.saleDate && it.saleDate < d);
   const bought = all.filter(it => it.boughtOn);
-  return `${topBar('想買的東西', `${want.length} 件想買 · ${bought.length} 件已買`, true)}
+  return `${topBar('淘寶採購清單', `${want.length} 件要買 · ${bought.length} 件已買`, true)}
   <div class="body">
-    <div class="note plum">打折日期請自己輸入，這個 DEMO 不會自動抓商店檔期。想買的東西只在 App 裡，不會出現在桌面小工具。</div>
+    <div class="note plum">大量採購時的備忘。打折日期請自己輸入，到了提前提醒日可以用通知或鬧鐘。只在 App 裡，不會出現在桌面小工具。</div>
     <div class="sec"><span class="ttl">即將打折</span><span>${upcoming.length} 件</span></div>
     ${upcoming.length ? upcoming.map(buyRow).join('') : `<div class="card empty"><div class="e">🏷️</div>還沒有即將到來的檔期</div>`}
     ${noSale.length ? `<div class="sec"><span class="ttl">還沒有檔期</span></div>${noSale.map(buyRow).join('')}` : ''}
     ${past.length ? `<div class="sec"><span class="ttl">檔期已過</span></div>${past.map(buyRow).join('')}` : ''}
-    ${bought.length ? `<div class="sec"><span class="ttl">已買</span></div>${bought.map(buyRow).join('')}` : ''}
+    ${bought.length ? `<div class="sec"><span class="ttl">已買</span></div>${bought.map(buyRow).join('')}
+      <button class="btn ghost" data-act="clear-bought">清除已買</button>` : ''}
     <button class="btn plum" data-act="sim" data-kind="sale">模擬打折提醒</button>
     <div class="hint">會用最接近、且已到提前提醒日的商品來示範；沒有的話就用最近一檔。</div>
   </div>
@@ -272,16 +314,18 @@ function timeSelects(slot, value) {
   </div>`;
 }
 
-function slotCard(key, title, emoji) {
+function slotCard(key, title, emoji, hint, featured) {
   const s = slotOf(key);
   const day = todayDow();
   const on = D.isSlotDay(s, day);
   const dayPills = [1, 2, 3, 4, 5, 6, 0].map(d =>
     `<button type="button" class="pill ${s.weekdays.includes(d) ? 'on' : ''}" data-act="toggle-day" data-slot="${key}" data-d="${d}">週${D.WEEKDAYS[d]}</button>`
   ).join('');
-  return `<div class="card">
-    <div class="lab" style="font-weight:900;font-size:16px;margin-bottom:4px">${emoji} ${esc(title)}</div>
+  const simLab = key === 'night' ? '模擬前一晚提醒' : `模擬${s.mode === 'alarm' ? '鬧鐘' : '通知'}`;
+  return `<div class="card ${featured ? 'feat' : ''}">
+    <div class="lab" style="font-weight:900;font-size:16px;margin-bottom:4px">${emoji} ${esc(title)}${featured ? ' <span class="badge amber">主力</span>' : ''}</div>
     <div class="hint" style="margin-bottom:10px">${esc(D.workdaysLabel(s.weekdays))} ${esc(D.formatTime(s.time))} · ${esc(D.modeLabel(s.mode))}${on ? ' · 今天會提醒' : ' · 今天不在提醒日'}</div>
+    ${hint ? `<div class="hint" style="margin-bottom:10px">${hint}</div>` : ''}
     <div class="field"><span class="lbl">時間</span>${timeSelects(key, s.time)}</div>
     <div class="lbl" style="margin:14px 0 8px">哪些天要提醒</div>
     <div class="pills wrap">${dayPills}</div>
@@ -290,19 +334,19 @@ function slotCard(key, title, emoji) {
       <button type="button" class="pill ${s.mode === 'notify' ? 'on' : ''}" data-act="set-mode" data-slot="${key}" data-v="notify">通知</button>
       <button type="button" class="pill ${s.mode === 'alarm' ? 'on amber' : ''}" data-act="set-mode" data-slot="${key}" data-v="alarm">鬧鐘</button>
     </div>
-    <button class="btn ${s.mode === 'alarm' ? 'amber' : ''}" style="margin-top:14px" data-act="sim" data-kind="${key}">模擬${s.mode === 'alarm' ? '鬧鐘' : '通知'}</button>
+    <button class="btn ${s.mode === 'alarm' ? 'amber' : ''}" style="margin-top:14px" data-act="sim" data-kind="${key}">${simLab}</button>
   </div>`;
 }
 
 function renderRemind() {
-  return `${topBar('提醒設定', '每個時段可選通知或鬧鐘', true)}
+  return `${topBar('提醒設定', '下班順便做是主力，前一晚再準備明天', true)}
   <div class="body">
-    <div class="note">每個時段自己設定時間、星期和方式。「通知」會在畫面上跳出一則提醒；「鬧鐘」會全螢幕響起，要按關閉或稍後才會停。正式 App 的鬧鐘會持續響到你關掉為止。</div>
-    ${slotCard('morning', '上班帶出門', '👜')}
-    ${slotCard('evening', '下班順便做', '🛒')}
+    <div class="note amber">先設定下班順便做的提醒。上班帶出門只在前一晚通知（預設 22:00），問你明天要帶的東西準備好了嗎，沒有早上鬧鐘。</div>
+    ${slotCard('evening', '下班順便做', '🛒', '這是主力提醒，列出今天還沒做完的順便事項。', true)}
+    ${slotCard('night', '前一晚提醒', '🌙', '在你選的這幾天晚上提醒，列出隔天要帶出門的東西。預設週日到週四晚（準備隔天上班）。上班帶出門沒有早上鬧鐘。')}
     <div class="card">
-      <div class="lab" style="font-weight:800">想買的東西 · 打折提醒</div>
-      <div class="hint" style="margin:6px 0 10px">在「想買」清單為單一商品設定打折日期、提前幾天，以及通知或鬧鐘。日期要自己輸入。</div>
+      <div class="lab" style="font-weight:800">淘寶採購 · 打折提醒</div>
+      <div class="hint" style="margin:6px 0 10px">在淘寶清單為單一商品設定打折日期、提前幾天，以及通知或鬧鐘。日期要自己輸入，不會出現在小工具。</div>
       <button class="btn plum" data-act="sim" data-kind="sale">模擬打折提醒</button>
     </div>
     <div class="card">
@@ -337,7 +381,7 @@ function remindCopy(kind) {
   if (kind === 'sale') {
     const it = pickSaleItem();
     if (!it) {
-      return { kind, mode: 'notify', list: 'buy', title: '目前沒有即將打折的商品', body: '先在想買的東西裡加上打折日期', sysTitle: '出門備忘 · 打折提醒', time: '' };
+      return { kind, mode: 'notify', list: 'buy', title: '目前沒有即將打折的商品', body: '先在淘寶清單裡加上打折日期', sysTitle: '出門備忘 · 打折提醒', time: '' };
     }
     const due = D.isSaleRemindDue(it, today());
     return {
@@ -349,7 +393,23 @@ function remindCopy(kind) {
       time: ''
     };
   }
-  const slot = kind === 'evening' ? 'evening' : 'morning';
+  if (kind === 'night') {
+    const s = slotOf('night');
+    const tm = D.tomorrowOf(now());
+    const items = itemsOf('morning').filter(it => D.stillVisibleToday(it, tm.date, tm.day));
+    const n = items.length;
+    return {
+      kind: 'night',
+      mode: s.mode === 'alarm' ? 'alarm' : 'notify',
+      list: 'morning',
+      headline: '明天要帶的東西準備好了嗎',
+      title: `${D.formatTime(s.time)}，明天要帶的東西準備好了嗎`,
+      body: n ? `${namesOf(items)}，明天（${tm.short}）有 ${n} 件` : `明天（${tm.short}）沒有要帶出門的項目`,
+      sysTitle: '出門備忘 · 前一晚提醒',
+      time: s.time
+    };
+  }
+  const slot = kind === 'morning' ? 'morning' : 'evening';
   const s = slotOf(slot);
   const left = remaining(slot);
   const n = left.length;
@@ -380,7 +440,8 @@ function showBanner(copy) {
   hideAlarm();
   const el = $('#nban');
   const plum = copy.kind === 'sale' ? ' plum' : '';
-  el.innerHTML = `<div class="app"><span class="dot${plum}">${copy.kind === 'sale' ? '🏷️' : '☀️'}</span>出門備忘<span class="when">現在</span></div>
+  const ico = copy.kind === 'sale' ? '🏷️' : copy.kind === 'night' ? '🌙' : copy.kind === 'evening' ? '🛒' : '☀️';
+  el.innerHTML = `<div class="app"><span class="dot${plum}">${ico}</span>出門備忘<span class="when">現在</span></div>
     <div class="ttl">${esc(copy.title)}</div>
     <div class="bd">${esc(copy.body)}</div>`;
   el.classList.remove('hidden');
@@ -417,7 +478,7 @@ function showAlarm(copy) {
       <button class="btn listen" type="button" data-act="listen-alarm">聽鬧鐘</button>
       <div class="btns">
         <button class="btn ghost" type="button" data-act="alarm-snooze">稍後</button>
-        <button class="btn amber" type="button" data-act="alarm-off" data-list="${esc(copy.list || '')}" data-id="${esc(copy.itemId || '')}">關閉</button>
+        <button class="btn amber" type="button" data-act="alarm-off" data-list="${esc(copy.list || '')}">關閉</button>
       </div>
     </div>
   </div>`;
@@ -485,16 +546,55 @@ function openFromRemind(copy) {
 
 function simulate(kind) {
   const copy = remindCopy(kind);
-  if (kind !== 'sale') {
-    const slot = slotOf(kind === 'evening' ? 'evening' : 'morning');
-    if (!D.isSlotDay(slot, todayDow())) {
+  if (kind === 'sale') {
+    if (!pickSaleItem()) toast('先在淘寶清單裡加上打折日期');
+  } else {
+    const slotName = kind === 'night' ? 'night' : 'evening';
+    const slot = slotOf(slotName);
+    if (slot && !D.isSlotDay(slot, todayDow())) {
       toast('今天不在你選的提醒日（DEMO 還是示範給你看）');
     }
-  } else if (!pickSaleItem()) {
-    toast('先在想買的東西裡加上打折日期');
   }
   if (copy.mode === 'alarm') showAlarm(copy);
   else showBanner(copy);
+}
+
+function addFrequent(list, index) {
+  const freq = (D.FREQUENT[list] || [])[Number(index)];
+  if (!freq) return;
+  const d = today(), day = todayDow();
+  const existing = itemsOf(list).find(it => it.title === freq.title);
+  if (existing && D.stillVisibleToday(existing, d, day)) {
+    toast(`「${freq.title}」已經在今天的清單`);
+    return;
+  }
+  if (existing && existing.repeat === 'once' && existing.completedOnce) {
+    existing.completedOnce = false;
+    existing.doneOn = null;
+    save();
+    toast(`已把「${freq.title}」加回今天`);
+    render();
+    return;
+  }
+  if (existing && !D.stillVisibleToday(existing, d, day) && existing.repeat === 'weekly') {
+    toast(`「${freq.title}」已在清單裡，但今天不是它的提醒日`);
+    return;
+  }
+  state.items.push({
+    id: uid(),
+    list,
+    title: freq.title,
+    emoji: freq.emoji || '📝',
+    type: list === 'evening' ? (freq.type || D.inferType(freq.title)) : '',
+    repeat: freq.repeat || 'once',
+    weekdays: [...(freq.weekdays || [])],
+    note: '',
+    doneOn: null,
+    completedOnce: false
+  });
+  save();
+  toast(`已加入「${freq.title}」`);
+  render();
 }
 
 function sheetItem(existing, defaultList) {
@@ -504,14 +604,15 @@ function sheetItem(existing, defaultList) {
     return;
   }
   const it = existing || {
-    list: defaultList || 'morning',
+    list: defaultList === 'morning' ? 'morning' : 'evening',
     title: '',
     emoji: '',
-    repeat: 'daily',
+    type: defaultList === 'morning' ? '' : 'take',
+    repeat: defaultList === 'morning' ? 'daily' : 'once',
     weekdays: [1, 2, 3, 4, 5],
     note: ''
   };
-  const list = it.list === 'evening' ? 'evening' : 'morning';
+  const list = it.list === 'morning' ? 'morning' : 'evening';
   const emojis = D.EMOJIS[list];
   const dayPills = [1, 2, 3, 4, 5, 6, 0].map(d =>
     `<button type="button" class="pill ${(it.weekdays || []).includes(d) ? 'on' : ''}" data-act="form-day" data-d="${d}">週${D.WEEKDAYS[d]}</button>`
@@ -519,14 +620,20 @@ function sheetItem(existing, defaultList) {
   openSheet(`
     <h2>${isEdit ? '編輯項目' : '新增項目'}</h2>
     <div class="field"><span class="lbl">要做什麼</span>
-      <input type="text" id="f-title" value="${esc(it.title)}" placeholder="例如：鑰匙、買牛奶" maxlength="30">
+      <input type="text" id="f-title" value="${esc(it.title)}" placeholder="${list === 'evening' ? '例如：拿包裹、買牛奶' : '例如：鑰匙、雨傘'}" maxlength="30">
     </div>
     <div class="lbl">加到哪個清單</div>
     <div class="pills wrap">
-      <button type="button" class="pill ${list === 'morning' ? 'on' : ''}" data-act="form-list" data-v="morning">👜 上班帶出門</button>
       <button type="button" class="pill ${list === 'evening' ? 'on amber' : ''}" data-act="form-list" data-v="evening">🛒 下班順便做</button>
+      <button type="button" class="pill ${list === 'morning' ? 'on' : ''}" data-act="form-list" data-v="morning">👜 上班帶出門</button>
     </div>
-    <div class="hint">想買的東西請到「想買」分頁新增，不會出現在桌面小工具。</div>
+    <div class="hint">淘寶採購請到「淘寶」分頁新增，不會出現在小工具，也不會提醒。</div>
+    ${list === 'evening' ? `
+    <div class="lbl">類型</div>
+    <div class="pills wrap">
+      <button type="button" class="pill ${it.type !== 'buy' ? 'on' : ''}" data-act="form-type" data-v="take">拿</button>
+      <button type="button" class="pill ${it.type === 'buy' ? 'on amber' : ''}" data-act="form-type" data-v="buy">買</button>
+    </div>` : ''}
     <div class="lbl">圖示</div>
     <div class="pills wrap">
       ${emojis.map(e => `<button type="button" class="pill emoji ${it.emoji === e ? 'on' : ''}" data-act="form-emoji" data-v="${esc(e)}">${e}</button>`).join('')}
@@ -545,7 +652,7 @@ function sheetItem(existing, defaultList) {
       <input type="text" id="f-note" value="${esc(it.note || '')}" placeholder="例如：超商取件" maxlength="40">
     </div>
     <div class="btns">
-      <button class="btn" type="button" data-act="save-item" data-id="${esc(isEdit ? existing.id : '')}">儲存</button>
+      <button class="btn ${list === 'evening' ? 'amber' : ''}" type="button" data-act="save-item" data-id="${esc(isEdit ? existing.id : '')}">儲存</button>
       <button class="btn ghost" type="button" data-act="close-sheet">取消</button>
     </div>
     ${isEdit ? `<button class="link red" type="button" data-act="delete-item" data-id="${esc(existing.id)}">刪除這個項目</button>` : ''}
@@ -557,7 +664,8 @@ function sheetItem(existing, defaultList) {
     kind: 'commute',
     list,
     emoji: it.emoji || (emojis[0] || '📝'),
-    repeat: it.repeat || 'daily',
+    type: list === 'evening' ? (it.type || 'take') : '',
+    repeat: it.repeat || (list === 'evening' ? 'once' : 'daily'),
     weekdays: [...(it.weekdays || [])]
   };
 }
@@ -565,7 +673,7 @@ function sheetItem(existing, defaultList) {
 function sheetBuy(existing) {
   const isEdit = !!(existing && existing.id);
   const it = existing || {
-    list: 'buy', title: '', emoji: '🧥', note: '',
+    list: 'buy', title: '', emoji: '📦', note: '',
     saleName: '', saleDate: '', remindDays: 3, remindMode: 'notify'
   };
   const hasSale = !!(it.saleDate || it.saleName);
@@ -574,16 +682,16 @@ function sheetBuy(existing) {
     `<button type="button" class="pill ${it.saleName === n ? 'on plum' : ''}" data-act="form-sale-name" data-v="${esc(n)}">${esc(n)}</button>`
   ).join('');
   openSheet(`
-    <h2>${isEdit ? '編輯想買的東西' : '新增想買的東西'}</h2>
+    <h2>${isEdit ? '編輯採購項目' : '新增採購項目'}</h2>
     <div class="field"><span class="lbl">名稱</span>
-      <input type="text" id="f-title" value="${esc(it.title)}" placeholder="例如：冬季外套" maxlength="30">
+      <input type="text" id="f-title" value="${esc(it.title)}" placeholder="例如：冬季拖鞋" maxlength="30">
     </div>
     <div class="lbl">圖示</div>
     <div class="pills wrap">
       ${emojis.map(e => `<button type="button" class="pill emoji ${it.emoji === e ? 'on' : ''}" data-act="form-emoji" data-v="${esc(e)}">${e}</button>`).join('')}
     </div>
-    <div class="field"><span class="lbl">備註（哪裡買、大概多少錢）</span>
-      <input type="text" id="f-note" value="${esc(it.note || '')}" placeholder="例如：百貨公司，預算 3000" maxlength="40">
+    <div class="field"><span class="lbl">備註（選填，例如規格、賣家）</span>
+      <input type="text" id="f-note" value="${esc(it.note || '')}" placeholder="例如：看評價再下單" maxlength="40">
     </div>
     <div class="set-row">
       <div class="grow"><div class="lab">有打折日期</div><div class="desc">日期要自己輸入，不會自動抓檔期</div></div>
@@ -619,7 +727,7 @@ function sheetBuy(existing) {
   if (title) { title.focus(); title.select(); }
   $('#dlg')._form = {
     kind: 'buy',
-    emoji: it.emoji || '🧥',
+    emoji: it.emoji || '📦',
     saleOn: hasSale,
     saleName: it.saleName || '',
     remindDays: Number(it.remindDays) || 0,
@@ -672,8 +780,7 @@ function saveItem(id) {
     const saleDate = saleOn ? ($('#f-sale-date')?.value || '') : '';
     if (saleOn && !saleDate) { toast('請輸入打折日期，或關掉打折日期'); return; }
     const payload = {
-      list: 'buy', title, note,
-      emoji: form.emoji || '🧥',
+      list: 'buy', title, note, emoji: form.emoji || '📦',
       saleName, saleDate,
       remindDays: Number(form.remindDays) || 0,
       remindMode: form.remindMode === 'alarm' ? 'alarm' : 'notify'
@@ -685,21 +792,22 @@ function saveItem(id) {
       save(); closeSheet(); toast('已更新'); render(); return;
     }
     state.items.push({ id: uid(), boughtOn: null, ...payload });
-    save(); closeSheet(); toast('已加入想買的東西'); render(); return;
+    save(); closeSheet(); toast('已加入淘寶採購清單'); render(); return;
   }
-  const list = form.list === 'evening' ? 'evening' : 'morning';
-  const repeat = form.repeat || 'daily';
+  const list = form.list === 'morning' ? 'morning' : 'evening';
+  const repeat = form.repeat || (list === 'evening' ? 'once' : 'daily');
   const weekdays = repeat === 'weekly' ? [...(form.weekdays || [])].sort((a, b) => a - b) : [];
   if (repeat === 'weekly' && !weekdays.length) { toast('先選要提醒的星期'); return; }
   const emoji = form.emoji || (D.EMOJIS[list][0] || '📝');
+  const type = list === 'evening' ? (form.type || D.inferType(title)) : '';
   if (id) {
     const it = itemById(id);
     if (!it) return;
-    Object.assign(it, { title, note, list, repeat, weekdays, emoji });
+    Object.assign(it, { title, note, list, repeat, weekdays, emoji, type });
     if (repeat !== 'once') it.completedOnce = false;
     save(); closeSheet(); toast('已更新'); render(); return;
   }
-  state.items.push({ id: uid(), list, title, note, emoji, repeat, weekdays, doneOn: null, completedOnce: false });
+  state.items.push({ id: uid(), list, title, note, emoji, type, repeat, weekdays, doneOn: null, completedOnce: false });
   save(); closeSheet(); toast('已加入' + D.LISTS[list].name); render();
 }
 
@@ -709,7 +817,7 @@ function toggleItem(id) {
   if (it.list === 'buy') {
     if (it.boughtOn) {
       it.boughtOn = null;
-      save(); toast('已改回想買'); render(); return;
+      save(); toast('已改回要買'); render(); return;
     }
     it.boughtOn = today();
     save(); toast(`「${it.title}」已移到已買`); render(); return;
@@ -736,6 +844,14 @@ function deleteItem(id) {
   save(); closeSheet(); toast('已刪除'); render();
 }
 
+function clearBought() {
+  const n = itemsOf('buy').filter(it => it.boughtOn).length;
+  if (!n) { toast('沒有已買項目'); return; }
+  if (!confirm(`要清除 ${n} 件已買項目嗎？`)) return;
+  state.items = state.items.filter(it => !(it.list === 'buy' && it.boughtOn));
+  save(); toast('已清除已買'); render();
+}
+
 function maybeWelcome() {
   try {
     if (localStorage.getItem(WELCOME_KEY)) return;
@@ -744,18 +860,17 @@ function maybeWelcome() {
   openSheet(`
     <h2>這是可點的 DEMO</h2>
     <div class="muted">看看改過的「出門備忘」。內容都是範例資料，不是正式 App。</div>
-    <div class="note">主角是桌面小工具：今天要帶出門、下班順便做的項目可以直接在小工具上打勾或新增。想買的東西只在 App 裡，不會出現在小工具。</div>
-    <div class="note amber">早上、下班都可以自己設定時間和星期，並選擇「通知」或「鬧鐘」。打折日期請自己輸入，到了提前提醒日可以用通知或鬧鐘提醒你。</div>
-    <button class="btn" data-act="close-sheet">開始用</button>
+    <div class="note amber">主角是下班順便做：桌面小工具會先列出這些項目，並用「拿」或「買」標出來。常用項目（例如拿包裹、買牛奶）點一下就能加入今天。</div>
+    <div class="note">上班帶出門只在前一晚提醒（預設晚上 10:00 通知）：明天要帶的東西準備好了嗎。沒有早上鬧鐘。</div>
+    <div class="note plum">淘寶採購清單只在 App 裡。可手動輸入打折日期，提前當天／1／3／7 天用通知或鬧鐘提醒。不會出現在小工具。</div>
+    <button class="btn amber" data-act="close-sheet">開始用</button>
   `);
   bind($('#dlg'));
 }
 
 function bind(root) {
   root.querySelectorAll('[data-act]').forEach(el => {
-    el.addEventListener('click', ev => {
-      onAct(el.dataset.act, el, ev);
-    });
+    el.addEventListener('click', ev => { onAct(el.dataset.act, el, ev); });
   });
   root.querySelectorAll('[data-bind-time]').forEach(el => {
     el.addEventListener('change', () => {
@@ -792,7 +907,10 @@ function onAct(act, el, ev) {
   } else if (act === 'add') {
     ev.preventDefault();
     ev.stopPropagation();
-    sheetItem(null, el.dataset.list || '');
+    sheetItem(null, el.dataset.list || 'evening');
+  } else if (act === 'add-freq') {
+    ev.preventDefault();
+    addFrequent(el.dataset.list, el.dataset.i);
   } else if (act === 'close-sheet') {
     closeSheet();
   } else if (act === 'save-item') {
@@ -801,12 +919,25 @@ function onAct(act, el, ev) {
   } else if (act === 'delete-item') {
     ev.preventDefault();
     deleteItem(id);
+  } else if (act === 'clear-bought') {
+    ev.preventDefault();
+    clearBought();
   } else if (act === 'form-list' || act === 'form-repeat') {
     const form = $('#dlg')._form;
-    if (act === 'form-list') form.list = el.dataset.v;
-    else form.repeat = el.dataset.v;
-    if (act === 'form-list' && !D.EMOJIS[form.list].includes(form.emoji)) form.emoji = D.EMOJIS[form.list][0];
+    if (act === 'form-list') {
+      form.list = el.dataset.v;
+      if (!D.EMOJIS[form.list].includes(form.emoji)) form.emoji = D.EMOJIS[form.list][0];
+      if (form.list === 'evening' && !form.type) form.type = 'take';
+      if (form.list === 'morning') form.type = '';
+    } else form.repeat = el.dataset.v;
     rebuildForm();
+  } else if (act === 'form-type') {
+    const form = $('#dlg')._form;
+    form.type = el.dataset.v;
+    $('#dlg').querySelectorAll('[data-act=form-type]').forEach(b => {
+      b.classList.toggle('on', b.dataset.v === form.type);
+      b.classList.toggle('amber', b.dataset.v === 'buy' && form.type === 'buy');
+    });
   } else if (act === 'form-emoji') {
     const form = $('#dlg')._form;
     form.emoji = el.dataset.v;
@@ -905,7 +1036,7 @@ function render() {
   bind(app);
   maybeWelcome();
   if (root === 'sim') {
-    const kind = parts[1] === 'evening' || parts[1] === 'sale' || parts[1] === 'morning' ? parts[1] : 'morning';
+    const kind = parts[1] === 'night' || parts[1] === 'sale' || parts[1] === 'evening' || parts[1] === 'morning' ? parts[1] : 'evening';
     if (kind === 'sale') {
       app.innerHTML = renderBuy();
       bind(app);
