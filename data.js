@@ -1,6 +1,6 @@
 /** 出門備忘 DEMO — 範例資料與純函式。所有項目皆為範例。 */
 
-export const VERSION = 3;
+export const VERSION = 4;
 export const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 
 export const LISTS = {
@@ -39,9 +39,10 @@ export const FREQUENT = {
 };
 
 export const SEED_ITEMS = [
-  { id: 'e1', list: 'evening', title: '買牛奶', emoji: '🥛', type: 'buy', repeat: 'once', weekdays: [], note: '全聯或家樂福都可以', doneOn: null, completedOnce: false },
-  { id: 'e2', list: 'evening', title: '拿包裹', emoji: '📦', type: 'take', repeat: 'once', weekdays: [], note: '超商取件', doneOn: null, completedOnce: false },
-  { id: 'e3', list: 'evening', title: '拿乾洗衣服', emoji: '👔', type: 'take', repeat: 'once', weekdays: [], note: '', doneOn: null, completedOnce: false },
+  { id: 'e1', list: 'evening', title: '買牛奶', emoji: '🥛', type: 'buy', repeat: 'once', weekdays: [], dueOffset: 0, note: '全聯或家樂福都可以', doneOn: null, completedOnce: false },
+  { id: 'e2', list: 'evening', title: '拿包裹', emoji: '📦', type: 'take', repeat: 'once', weekdays: [], dueOffset: 0, note: '超商取件', doneOn: null, completedOnce: false },
+  { id: 'e3', list: 'evening', title: '拿乾洗衣服', emoji: '👔', type: 'take', repeat: 'once', weekdays: [], dueOffset: 0, note: '', doneOn: null, completedOnce: false },
+  { id: 'e6', list: 'evening', title: '明天下班買牛奶', emoji: '🥛', type: 'buy', repeat: 'once', weekdays: [], dueOffset: 1, note: '今晚先加進清單，明天下班再買', doneOn: null, completedOnce: false },
   { id: 'e4', list: 'evening', title: '倒垃圾', emoji: '🗑️', type: 'take', repeat: 'weekly', weekdays: [3], note: '週三晚上拿到樓下', doneOn: null, completedOnce: false },
   { id: 'e5', list: 'evening', title: '加油', emoji: '⛽', type: 'buy', repeat: 'weekly', weekdays: [5], note: '週五下班順路', doneOn: null, completedOnce: false },
   { id: 'm1', list: 'morning', title: '鑰匙', emoji: '🔑', repeat: 'daily', weekdays: [], note: '', doneOn: null, completedOnce: false },
@@ -60,10 +61,13 @@ export const SEED_ITEMS = [
 export function seedState() {
   return {
     version: VERSION,
-    items: SEED_ITEMS.map(it => ({
-      ...it,
-      weekdays: [...(it.weekdays || [])]
-    })),
+    items: SEED_ITEMS.map(it => {
+      const copy = { ...it, weekdays: [...(it.weekdays || [])] };
+      if (it.dueOffset === 0) copy.dueDate = todayISO();
+      else if (it.dueOffset === 1) copy.dueDate = addDays(todayISO(), 1);
+      delete copy.dueOffset;
+      return copy;
+    }),
     settings: {
       evening: { ...SEED_SETTINGS.evening, weekdays: [...SEED_SETTINGS.evening.weekdays] },
       night: { ...SEED_SETTINGS.night, weekdays: [...SEED_SETTINGS.night.weekdays] }
@@ -129,10 +133,42 @@ export function inferType(title) {
 export function isDueOn(item, dateStr, day) {
   if (item.list === 'buy') return false;
   if (item.completedOnce) return item.doneOn === dateStr;
+  if (item.dueDate) return item.dueDate === dateStr;
   if (item.repeat === 'daily') return true;
   if (item.repeat === 'once') return true;
   if (item.repeat === 'weekly') return (item.weekdays || []).includes(day);
   return false;
+}
+
+export function isOverdue(item, dateStr) {
+  return !!(item.dueDate && item.dueDate < dateStr && !item.completedOnce && item.list !== 'buy');
+}
+
+export function defaultWhen(d = new Date()) {
+  return d.getHours() >= 18 ? 'tomorrow' : 'today';
+}
+
+export function inferWhen(item, todayStr) {
+  if (!item || !item.dueDate) return 'repeat';
+  if (item.dueDate === todayStr) return 'today';
+  if (item.dueDate === addDays(todayStr, 1)) return 'tomorrow';
+  return 'date';
+}
+
+export function whenLabel(item, todayStr) {
+  if (item.dueDate) {
+    if (item.dueDate === todayStr) return '今天';
+    if (item.dueDate === addDays(todayStr, 1)) return '明天';
+    if (item.dueDate < todayStr) return (item.completedOnce ? '' : '已過期 · ') + isoLabel(item.dueDate);
+    return isoLabel(item.dueDate);
+  }
+  return repeatLabel(item);
+}
+
+export function dateFromISO(iso) {
+  if (!iso) return new Date();
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
 export function isDoneOn(item, dateStr) {
