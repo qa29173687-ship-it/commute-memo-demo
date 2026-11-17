@@ -276,6 +276,7 @@ function renderHome() {
       <button class="btn ghost" type="button" data-act="sim" data-kind="evening">模擬下班提醒</button>
       <button class="btn amber" type="button" data-act="sim" data-kind="night">模擬晚上 10 點</button>
     </div>
+    <a class="btn ghost" href="widget.html" style="display:block;text-align:center;text-decoration:none;margin:10px 0">📱 看桌面小工具 DEMO（小／中／大三種）</a>
     <div class="card freq-card">
       ${frequentBlock('evening', true)}
     </div>

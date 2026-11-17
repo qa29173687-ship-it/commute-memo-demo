@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>順便備忘 · 桌面小工具 DEMO</title>
+<meta name="theme-color" content="#1f2a44">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="widget.css">
+</head>
+<body>
+<div class="topstrip">
+  <a class="back" href="./">← 回 DEMO</a>
+  <span class="ttl">桌面小工具 DEMO</span>
+  <span class="badge">範例資料</span>
+</div>
+<div class="sizes" role="tablist">
+  <button data-size="small">小 2×2</button>
+  <button data-size="medium">中 4×2</button>
+  <button data-size="large">大 4×4</button>
+  <button data-size="all">全部比較</button>
+</div>
+<main id="home" class="home"></main>
+<div id="sheet" class="sheet hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<script type="module" src="widget.js"></script>
+</body>
+</html>
