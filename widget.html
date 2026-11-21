@@ -4,33 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>順便備忘 · 桌面小工具 DEMO</title>
-<meta name="theme-color" content="#1d1a2e">
+<meta name="theme-color" content="#000000">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="widget.css?v=5">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="widget.css?v=6">
 </head>
 <body>
-<header class="appbar">
-  <a class="back" href="./" aria-label="回 App DEMO">‹ App DEMO</a>
-  <div class="ttl">桌面小工具 <small>DEMO</small></div>
-  <span class="badge">範例資料</span>
-</header>
-<div class="ctrls">
-  <nav class="seg3" data-k="size">
-    <button data-v="medium">4×2</button><button data-v="large">4×4</button><button data-v="all">兩種比較</button>
-  </nav>
-  <div class="opt"><span>底色</span>
-    <nav class="seg3" data-k="tint"><button data-v="light">☀️ 淺色</button><button data-v="dark">🌙 深色</button></nav></div>
-  <div class="opt"><span>透明度</span>
-    <nav class="seg3" data-k="alpha"><button data-v="high">高</button><button data-v="mid">中</button><button data-v="low">低</button></nav></div>
-  <div class="opt"><span>桌布</span>
-    <nav class="seg3" data-k="wall"><button data-v="grad">漸層</button><button data-v="city">夜景</button><button data-v="flowers">花田</button></nav></div>
+<div id="phone" class="phone">
+  <div id="home" style="display:contents"></div>
+  <div id="sheet" class="sheet hidden"></div>
+  <div id="toast" class="toast hidden"></div>
 </div>
-<main id="home" class="home"></main>
-<div id="sheet" class="sheet hidden"></div>
-<div id="toast" class="toast hidden"></div>
-<script type="module" src="widget.js?v=5"></script>
+<script type="module" src="widget.js?v=6"></script>
 </body>
 </html>

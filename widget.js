@@ -13,17 +13,18 @@ const FREQ = [
   { title: '拿乾洗衣服', type: 'take' }, { title: '買晚餐', type: 'buy' },
 ];
 const APPS = [
-  ['📞', '電話', '#3fb26b'], ['💬', 'LINE', '#06c755'], ['📷', '相機', '#5b6577'], ['🗺️', '地圖', '#4a8ff0'],
+  ['⏰', '時鐘', '#3d4a5c'], ['💬', 'LINE', '#06c755'], ['🖼️', '相簿', '#e9a23b'], ['🗺️', '地圖', '#4a8ff0'],
   ['📅', '日曆', '#f05d4a'], ['🎵', '音樂', '#ef4b7b'], ['☁️', '天氣', '#57a9f0'], ['⚙️', '設定', '#7a7f8a'],
+  ['🛒', '蝦皮', '#ee4d2d'], ['📺', 'YouTube', '#ff2a2a'], ['🏦', '銀行', '#2f6db5'], ['🧾', '發票', '#f2a33a'],
 ];
-const DOCK = [['📞', '', '#3fb26b'], ['💬', '', '#06c755'], ['🌐', '', '#4a8ff0'], ['📷', '', '#5b6577']];
+const DOCK = [['📞', '', '#3fb26b'], ['✉️', '', '#e8574a'], ['🌐', '', '#4a8ff0'], ['📷', '', '#5b6577']];
 const CHECK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const EMPTY_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
   <circle cx="32" cy="34" r="20" fill="var(--ok)" opacity=".22"/>
   <path d="M22 34.5l7 7 13-14" fill="none" stroke="var(--ok)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="11" cy="16" r="2.6" fill="#7fd3cf"/><circle cx="53" cy="12" r="2.2" fill="#f6a6c1"/>
   <circle cx="56" cy="44" r="2.6" fill="#ffc46b"/><circle cx="8" cy="46" r="2" fill="#8f7ff0"/></svg>`;
-const OPTS = { size: ['medium', 'large', 'all'], tint: ['light', 'dark'], alpha: ['high', 'mid', 'low'], wall: ['grad', 'city', 'flowers'] };
+const OPTS = { size: ['medium', 'large'], tint: ['light', 'dark'], alpha: ['high', 'mid', 'low'], wall: ['grad', 'city', 'flowers'] };
 
 let state = load();
 const recent = new Set(); // 剛打勾、還在變灰的
@@ -76,35 +77,67 @@ function widget(size) {
   return `<div class="w ${size}">${clock}<div class="wr">${head}${body}</div></div>`;
 }
 
-const search = '<div class="search"><span class="g"></span>搜尋<span class="mic">🎙️</span></div>';
 function render() {
   const now = new Date();
-  let content;
-  if (state.size === 'all') {
-    content = `<div class="lbl"><span>4×2</span>最小尺寸：時鐘＋清單（可捲動）</div><div class="grid">${widget('medium')}</div>
-      <div class="lbl" style="margin-top:14px"><span>4×4</span>清單更長、有備註、今天完成 N/M</div><div class="grid">${widget('large')}</div>`;
-  } else if (state.size === 'large') {
-    content = `<div class="grid">${widget('large')}${APPS.slice(0, 4).map(app).join('')}</div>`;
-  } else {
-    content = `<div class="grid">${widget('medium')}${APPS.map(app).join('')}${search}</div>`;
-  }
-  const home = document.getElementById('home');
-  home.className = `home ${state.wall}`;
-  home.innerHTML = `
-    <div class="statusbar"><span data-hm>${hm(now)}</span><span>5G ▮▮▮ 🔋 82%</span></div>
-    ${content}
-    <div class="caption">
-      <div class="note">🪟 <b>關於半透明：</b>Android 實機小工具只能做「半透明底色」，沒辦法像毛玻璃那樣把後面的桌布模糊。所以這個 DEMO 也只用半透明，你看到的就是實機能做到的樣子。</div>
-      📌 示意圖・範例資料
-      <ul><li>上面可以切換 <b>淺色／深色</b>、<b>透明度 高／中／低</b>、<b>桌布</b>，挑最好讀的組合。</li>
-      <li>左邊時鐘會即時走（實機用系統時鐘），點時間或標題會打開 App。</li>
-      <li>點圓圈打勾，可以按「復原」；按 <b>＋</b> 會跳出小輸入視窗。</li>
-      <li>最小 4×2（時鐘需要寬度，所以不做 2×2）；只顯示今天的下班順便做。</li></ul></div>
-    <div class="links"><a class="reset" href="./">‹ 回到 App DEMO</a><button class="reset" data-act="reset">恢復範例資料</button></div>
-    ${state.size === 'all' ? '' : `<div class="dock">${DOCK.map(app).join('')}</div>`}`;
+  const rows = 5; // 桌面 4×5 格
+  const used = state.size === 'large' ? 4 : 2;
+  const apps = APPS.slice(0, (rows - used) * 4);
+  const phone = document.getElementById('phone');
+  phone.className = `phone ${state.wall}`;
+  document.getElementById('home').innerHTML = `
+    <div class="statusbar"><span data-hm>${hm(now)}</span>
+      <button class="demo" data-act="settings" aria-label="DEMO 設定">⚙ 設定 <i>· 範例資料</i></button>
+      <span>5G ▮▮▮ 🔋 82%</span></div>
+    <div class="grid">${widget(state.size)}${apps.map(app).join('')}</div>
+    <div class="spacer"></div>
+    <div class="dock">${DOCK.map(app).join('')}</div>
+    <div class="search"><span class="g"></span>搜尋<span class="mic">🎙️</span></div>
+    <div class="gesture"></div>`;
   document.body.className = `tint-${state.tint} a-${state.alpha}`;
-  document.querySelectorAll('.seg3').forEach(n => n.querySelectorAll('button').forEach(b => b.classList.toggle('on', state[n.dataset.k] === b.dataset.v)));
+  layout();
   fresh.clear();
+}
+
+// 依手機畫面算桌面格子：寬 = (螢幕 − 邊距) / 4，高 = 可用高度 / 5
+function layout() {
+  const phone = document.getElementById('phone');
+  const W = phone.clientWidth, H = phone.clientHeight;
+  const icon = Math.round(Math.min(58, (W - 26) / 4 * 0.62));
+  const avail = H - 34 - 8 - (icon + 10) - 54 - 22 - 12;
+  phone.style.setProperty('--icon', icon + 'px');
+  phone.style.setProperty('--ch', Math.floor(avail / 5) + 'px');
+}
+window.addEventListener('resize', layout);
+
+const segs = (k, list) => `<div class="seg">${list.map(([v, l]) => `<button data-k="${k}" data-v="${v}" class="${state[k] === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+function openSettings() {
+  const sheet = document.getElementById('sheet');
+  sheet.innerHTML = `<div class="dlg set" role="dialog" aria-label="DEMO 設定">
+      <div class="handle"></div>
+      <h3>DEMO 設定 <span class="badge">範例資料</span></h3>
+      <div class="sub">換尺寸、顏色、透明度和桌布，挑最好讀的組合</div>
+      <div class="row2"><span>尺寸</span>${segs('size', [['medium', '4×2'], ['large', '4×4']])}</div>
+      <div class="row2"><span>底色</span>${segs('tint', [['light', '☀️ 淺色'], ['dark', '🌙 深色']])}</div>
+      <div class="row2"><span>透明度</span>${segs('alpha', [['high', '高'], ['mid', '中'], ['low', '低']])}</div>
+      <div class="row2"><span>桌布</span>${segs('wall', [['grad', '漸層'], ['city', '夜景'], ['flowers', '花田']])}</div>
+      <div class="info">🪟 <b>關於半透明：</b>Android 實機小工具只能做「半透明底色」，沒辦法像毛玻璃那樣把桌布模糊。所以這個 DEMO 也只用半透明，看到的就是實機做得到的樣子。
+        <ul><li>深色＝深色模式的樣子（新增視窗也會變深色）。</li>
+        <li>時鐘會即時走；點時間或標題會打開 App。</li>
+        <li>點圓圈打勾可以「復原」；按 ＋ 跳出新增小視窗。</li>
+        <li>最小 4×2，只顯示今天的下班順便做。</li></ul></div>
+      <div class="links"><a href="./">‹ 回 App DEMO</a><button data-x="reset">恢復範例資料</button></div>
+      <div class="acts"><button class="ok" data-x="close">完成</button></div>
+    </div>`;
+  sheet.classList.remove('hidden');
+  sheet.onclick = e => {
+    if (e.target === sheet) return close();
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.k) { state[b.dataset.k] = b.dataset.v; save(); render(); sheet.querySelectorAll(`[data-k="${b.dataset.k}"]`).forEach(x => x.classList.toggle('on', x === b)); }
+    else if (b.dataset.x === 'reset') { state = { ...state, items: SEED.map(x => ({ ...x, done: false })) }; recent.clear(); save(); render(); close(); toast('已恢復範例資料'); }
+    else if (b.dataset.x === 'close') close();
+  };
+  function close() { sheet.classList.add('hidden'); sheet.innerHTML = ''; }
 }
 
 let lastDay = new Date().toDateString();
@@ -177,18 +210,18 @@ function openAdd() {
 }
 
 document.addEventListener('click', e => {
-  const opt = e.target.closest('.seg3 button');
-  if (opt) { state[opt.parentElement.dataset.k] = opt.dataset.v; save(); render(); return; }
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act;
   if (act === 'check') check(b.dataset.id);
   else if (act === 'undo') { const it = state.items.find(i => i.id === b.dataset.id); if (it) { it.done = false; recent.delete(it.id); save(); render(); } document.getElementById('toast').classList.add('hidden'); }
   else if (act === 'add') openAdd();
+  else if (act === 'settings') openSettings();
   else if (act === 'open') toast('實機會打開「順便備忘」App <a href="./">看 App DEMO →</a>');
   else if (act === 'reset') { state = { ...state, items: SEED.map(x => ({ ...x, done: false })) }; recent.clear(); save(); render(); toast('已恢復範例資料'); }
 });
 
+if (!OPTS.size.includes(state.size)) state.size = 'medium';
 // 網址 #large-dark-high-flowers 之類可直接指定
 for (const tok of location.hash.replace('#', '').split('-')) {
   for (const [k, vals] of Object.entries(OPTS)) if (vals.includes(tok)) state[k] = tok;
