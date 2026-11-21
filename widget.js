@@ -67,7 +67,7 @@ function widget(size) {
       <span class="pl">今天完成</span><span class="pn">${doneN}<small> / ${total}</small></span>
       <div class="bar"><i style="width:${total ? doneN / total * 100 : 0}%"></i></div></div>` : '';
   const clock = `<button class="wc" data-act="open" aria-label="打開順便備忘">
-      <span><b class="hm" data-hm>${hm(now)}</b><span class="md" data-md style="display:block">${md(now)}</span><span class="wk" data-wk style="display:block">${wk(now)}</span></span>${prog}</button>`;
+      <span class="ck"><b class="hm"><span data-hh>${pad(now.getHours())}</span><span data-mm>${pad(now.getMinutes())}</span></b><span class="dw"><span data-md>${md(now)}</span> <span class="wk" data-wk>${wk(now)}</span></span></span>${prog}</button>`;
   const head = `<div class="wh"><button class="open" data-act="open"><span class="t">今天下班順便做</span><span class="d">${status}</span></button>
       <button class="plus" data-act="add" aria-label="新增">＋</button></div>`;
   const body = list.length
@@ -112,6 +112,8 @@ function tick() {
   const now = new Date();
   if (now.toDateString() !== lastDay) { lastDay = now.toDateString(); render(); return; }
   document.querySelectorAll('[data-hm]').forEach(e => { const v = hm(now); if (e.textContent !== v) e.textContent = v; });
+  document.querySelectorAll('[data-hh]').forEach(e => { const v = pad(now.getHours()); if (e.textContent !== v) e.textContent = v; });
+  document.querySelectorAll('[data-mm]').forEach(e => { const v = pad(now.getMinutes()); if (e.textContent !== v) e.textContent = v; });
   document.querySelectorAll('[data-md]').forEach(e => { e.textContent = md(now); });
   document.querySelectorAll('[data-wk]').forEach(e => { e.textContent = wk(now); });
 }
